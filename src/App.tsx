@@ -22,6 +22,7 @@ function App() {
     if(!socket){
       return;
     }
+    //@ts-ignore
     setSocket(socket);
     socket.onopen = () => {
       console.log("WebSocket connection established");
