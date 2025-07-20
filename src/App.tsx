@@ -1,56 +1,85 @@
-
-import { useEffect, useState } from 'react'
-import './App.css'
+import { useEffect, useState } from 'react';
+import './App.css';
 
 function App() {
-  const [socket,setSocket]=useState();
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("Disconnected");
 
   function sendMessage() {
-
-    if(!socket){
+    if (!socket || message.trim() === "") {
       return;
     }
-    //@ts-ignore
+    
     socket.send(message);
-
     setMessage("");
   }
 
+  function handleKeyPress(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  }
+
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    if(!socket){
-      return;
-    }
-    //@ts-ignore
-    setSocket(socket);
-    socket.onopen = () => {
+    const ws = new WebSocket("ws://localhost:8080");
+    
+    setSocket(ws);
+    setStatus("Connecting...");
+
+    ws.onopen = () => {
       console.log("WebSocket connection established");
+      setStatus("Connected");
     };
 
-    socket.onmessage = (event) => {
+    ws.onmessage = (event) => {
       alert("Message from server: " + event.data);
-
-    }
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
     };
 
-    socket.onclose = () => {
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setStatus("Connection Error");
+    };
+
+    ws.onclose = () => {
       console.log("WebSocket connection closed");
+      setStatus("Disconnected");
+    };
+
+    return () => {
+      ws.close();
     };
   }, []);
 
-
   return (
-    <>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", width: "100vw", flexDirection: "column" }}>
-        <input style={{ padding: "10px" }} value={message} onChange={(e)=>{setMessage(e.target.value)}} type='text' placeholder='Message...'></input>
-        <button onClick={sendMessage}>Send</button>
-
+    <div className="app-container">
+      <div className="chat-container">
+        <h1>WebSocket Chat</h1>
+        <p>Send "ping" to get pong..</p>
+        <div className={`status ${status.toLowerCase().replace(/\s+/g, '-')}`}>
+          Status: {status}
+        </div>
+        
+        <div className="input-group">
+          <input
+          style={{padding: "10px",  boxSizing: "border-box"}}
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
+            disabled={status !== "Connected"}
+          />
+          <button 
+            onClick={sendMessage}
+            disabled={!socket || status !== "Connected" || message.trim() === ""}
+          >
+            Send
+          </button>
+        </div>
       </div>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
